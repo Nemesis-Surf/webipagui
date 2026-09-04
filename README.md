@@ -2,7 +2,7 @@
   <img src="https://files.nemesis.surf/raw/YYVqdT.png" alt="Nemesis" width="100%" />
 </p>
 
-<h1 align="center">KNOW ISSUE</h1>
+<h1 align="center">KNOWN ISSUE</h1>
 mobile styling for app listing is bugged  
 this is being debugged  
 
