@@ -17,12 +17,12 @@ Sideloading Central loads AltStore-format repo JSON straight in your browser, me
 ## Screenshots
 
 <p align="center">
-  <img src="./screenshots/browse.png" alt="Browsing loaded repos with search and app cards" width="100%" />
+  <img src="./browse.png" alt="Browsing loaded repos with search and app cards" width="100%" />
 </p>
 
 <p align="center">
-  <img src="./screenshots/manage-repos.png" alt="Manage repos panel with import/export and recommended sources" width="49%" />
-  <img src="./screenshots/tools.png" alt="Sideloading tools panel" width="49%" />
+  <img src="./manage-repos.png" alt="Manage repos panel with import/export and recommended sources" width="49%" />
+  <img src="./tools.png" alt="Sideloading tools panel" width="49%" />
 </p>
 
 ## Features
