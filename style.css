@@ -94,6 +94,7 @@ body {
   font-family: var(--font-display);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -286,6 +287,7 @@ button {
 
 .page {
   max-width: var(--max-width);
+  width: 100%;
   margin: 0 auto;
   padding: 28px 20px 80px;
 }
@@ -349,9 +351,51 @@ button {
 .chip--error .chip__dot {
   background: var(--danger);
 }
+.chip--cors .chip__dot {
+  background: var(--warning);
+}
 .chip--loading .chip__dot {
   background: var(--warning);
   animation: pulse 1.1s ease-in-out infinite;
+}
+
+/* Chips are now buttons — make them feel interactive */
+button.chip {
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+button.chip:hover {
+  background: var(--bg-elevated-2);
+  border-color: var(--border-strong);
+}
+
+/* Active / selected chip */
+button.chip.chip--active {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-text);
+}
+
+button.chip.chip--active .chip__dot {
+  background: white;
+  animation: none;
+}
+
+button.chip.chip--active .chip__count,
+button.chip.chip--active .chip__label {
+  color: var(--accent-text);
+}
+
+/* Non-ok chips are not filterable — keep default cursor */
+button.chip.chip--error,
+button.chip.chip--cors,
+button.chip.chip--loading {
+  cursor: default;
 }
 
 @keyframes pulse {
@@ -411,6 +455,25 @@ button {
   font-weight: 500;
 }
 
+/* Inline "show all" button inside the status line */
+.status-line__clear {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: background 0.15s ease;
+}
+
+.status-line__clear:hover {
+  background: var(--bg-elevated-2);
+}
+
 .empty-state {
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-lg);
@@ -440,7 +503,7 @@ button {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 14px;
   margin-top: 6px;
 }
@@ -869,4 +932,189 @@ button {
   .card__actions {
     flex-direction: row;
   }
+
+  /* Prevent iOS from auto-zooming when focusing inputs (triggered when
+     font-size < 16px). Setting to 16px on mobile is the correct fix
+     that preserves user pinch-to-zoom, unlike maximum-scale=1. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ==========================================================================
+   PWA install banner
+   ========================================================================== */
+
+.install-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-elevated-2);
+  border-top: 1px solid var(--border-strong);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+  /* Prevent banner from showing a flash before JS hides it */
+  will-change: transform;
+}
+
+.install-banner--visible {
+  transform: translateY(0);
+}
+
+.install-banner__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(155deg, var(--accent), #4b2fd9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(124, 92, 255, 0.45);
+}
+
+.install-banner__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.install-banner__text strong {
+  font-size: 14px;
+  font-weight: 620;
+  color: var(--text-primary);
+}
+
+.install-banner__text span {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.install-banner__dismiss {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.install-banner__dismiss svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Lift the banner above the iOS home indicator on modern iPhones */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .install-banner {
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ==========================================================================
+   iOS install instructions tooltip
+   ========================================================================== */
+
+.ios-install-tip {
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  z-index: 160;
+  background: var(--bg-elevated-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 16px 18px 14px;
+  max-width: min(360px, calc(100vw - 32px));
+  width: max-content;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.ios-install-tip--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.ios-install-tip p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  text-align: center;
+  padding-right: 20px; /* room for close button */
+}
+
+.ios-install-tip p strong {
+  color: var(--text-primary);
+}
+
+.ios-install-tip__share-icon {
+  display: inline-block;
+  font-size: 16px;
+  vertical-align: middle;
+  line-height: 1;
+  margin: 0 1px;
+}
+
+.ios-install-tip__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: none;
+  background: var(--bg-elevated-2);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.ios-install-tip__close:hover {
+  background: var(--bg-elevated-3);
+  color: var(--text-primary);
+}
+
+.ios-install-tip__close svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Arrow pointing down toward the Safari toolbar */
+.ios-install-tip__arrow {
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 7px;
+  overflow: hidden;
+}
+
+.ios-install-tip__arrow::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 14px;
+  height: 14px;
+  background: var(--bg-elevated-3);
+  border: 1px solid var(--border-strong);
 }

@@ -1,7 +1,9 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Nemesis - Sideloading Central, The ultimate Sideloading One Stop Shops</title>
+    <title>
+      Nemesis - Sideloading Central, The ultimate Sideloading One Stop Shops
+    </title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
@@ -19,7 +21,10 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://sideloading.nemesis.surf/" />
-    <meta property="og:title" content="Nemesis - Sideloading Central, The ultimate Sideloading One Stop Shops" />
+    <meta
+      property="og:title"
+      content="Nemesis - Sideloading Central, The ultimate Sideloading One Stop Shops"
+    />
     <meta
       property="og:description"
       content="Browse and install iOS sideloading repos from your browser. Client-side, no backend, works with AltStore, SideStore, Feather, Scarlet, and eSign."
@@ -35,7 +40,10 @@
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://sideloading.nemesis.surf/" />
-    <meta property="twitter:title" content="Nemesis - Sideloading Central, The ultimate Sideloading One Stop Shops" />
+    <meta
+      property="twitter:title"
+      content="Nemesis - Sideloading Central, The ultimate Sideloading One Stop Shops"
+    />
     <meta
       property="twitter:description"
       content="Browse and install iOS sideloading repos from your browser. Client-side, no backend."
@@ -50,6 +58,15 @@
     <meta name="robots" content="index, follow" />
 
     <link rel="stylesheet" type="text/css" href="./style.css" />
+
+    <!-- PWA: service worker registration -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").catch(() => {});
+        });
+      }
+    </script>
   </head>
 
   <body>
@@ -57,7 +74,9 @@
     <header class="topbar">
       <a href="/" class="topbar__brand">
         <span class="topbar__mark">⌁</span>
-        <span class="topbar__wordmark">Sideloading Central<small>sideloading.nemesis.surf</small></span>
+        <span class="topbar__wordmark"
+          >Sideloading Central<small>sideloading.nemesis.surf</small></span
+        >
       </a>
       <div class="topbar__spacer"></div>
       <div class="search">
@@ -129,8 +148,8 @@
     <div class="page" style="padding-top: 0">
       <footer class="footer">
         <span
-          >Sideloading Central · runs entirely in your browser · no data leaves this
-          page</span
+          >Sideloading Central · runs entirely in your browser · no data leaves
+          this page</span
         >
         <span
           >IPAs are served by the repo owner, not nemesis.surf — verify sources
@@ -316,6 +335,62 @@
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- PWA install banner -->
+    <div class="install-banner" id="installBanner" hidden>
+      <div class="install-banner__icon">⌁</div>
+      <div class="install-banner__text">
+        <strong>Add to Home Screen</strong>
+        <span id="installBannerSub"
+          >Install this app for quick access from your home screen.</span
+        >
+      </div>
+      <button class="btn btn--primary btn--sm" id="installBannerBtn">
+        Install
+      </button>
+      <button
+        class="btn btn--ghost btn--sm install-banner__dismiss"
+        id="installBannerDismiss"
+        aria-label="Dismiss"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- iOS install instructions tooltip -->
+    <div class="ios-install-tip" id="iosInstallTip" hidden>
+      <button
+        class="ios-install-tip__close"
+        id="iosInstallTipClose"
+        aria-label="Close"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <p>
+        Tap <strong>Share</strong>
+        <span class="ios-install-tip__share-icon">⎋</span> then
+        <strong>Add to Home Screen</strong> to install this app.
+      </p>
+      <div class="ios-install-tip__arrow"></div>
     </div>
 
     <div class="toast" id="toast">

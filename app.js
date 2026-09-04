@@ -203,9 +203,10 @@
   // State
   // ------------------------------------------------------------------
   const state = {
-    repos: [], // { id, url, name, status: 'loading'|'ok'|'error', error, rawApps, count }
+    repos: [], // { id, url, name, status: 'loading'|'ok'|'error'|'cors', error, rawApps, count }
     combinedApps: [],
     search: "",
+    activeRepo: null, // repo id to filter by, or null = show all
     corsProxy: "",
     customTargets: [],
   };
@@ -425,13 +426,27 @@
       repo.name = json.name || hostOf(repo.url);
       repo.status = "ok";
     } catch (err) {
-      repo.status = "error";
       repo.rawApps = [];
       repo.count = 0;
-      repo.error =
-        err instanceof TypeError
-          ? "Couldn't reach it — likely blocked by CORS, or the URL is wrong"
-          : err.message || "Failed to load";
+      if (err instanceof TypeError) {
+        // TypeError from fetch() means either CORS-blocked or the host is
+        // completely unreachable. We can narrow it down: if a CORS proxy is
+        // NOT in use, the browser never reveals which one it is — but CORS is
+        // by far the most common reason a valid-looking URL fails here.
+        // If a proxy IS in use and it still throws TypeError, the host is
+        // genuinely unreachable.
+        if (state.corsProxy) {
+          repo.status = "error";
+          repo.error = "Unreachable even through the CORS proxy";
+        } else {
+          repo.status = "cors";
+          repo.error =
+            "CORS blocked — the repo server doesn't allow browser fetches. Try adding a CORS proxy in the Repos panel.";
+        }
+      } else {
+        repo.status = "error";
+        repo.error = err.message || "Failed to load";
+      }
     }
     renderRepobar();
     rebuildCombinedApps();
@@ -531,6 +546,17 @@
   // ------------------------------------------------------------------
   // Rendering: repo bar
   // ------------------------------------------------------------------
+
+  // Sort order: ok → error (unreachable) → cors → loading
+  const REPO_STATUS_ORDER = { ok: 0, error: 1, cors: 2, loading: 3 };
+
+  function sortedRepos() {
+    return [...state.repos].sort(
+      (a, b) =>
+        (REPO_STATUS_ORDER[a.status] ?? 9) - (REPO_STATUS_ORDER[b.status] ?? 9),
+    );
+  }
+
   function renderRepobar() {
     if (!state.repos.length) {
       el.repobar.innerHTML = "";
@@ -539,32 +565,74 @@
       return;
     }
 
-    el.repobar.innerHTML = state.repos
+    el.repobar.innerHTML = sortedRepos()
       .map((r) => {
-        const cls =
-          r.status === "ok" ? "ok" : r.status === "error" ? "error" : "loading";
+        const isActive = state.activeRepo === r.id;
+        const statusCls =
+          r.status === "ok"
+            ? "ok"
+            : r.status === "cors"
+              ? "cors"
+              : r.status === "error"
+                ? "error"
+                : "loading";
         const count =
           r.status === "ok"
             ? `<span class="chip__count">${r.count}</span>`
             : "";
+        const titleExtra = r.error ? ` — ${r.error}` : "";
         return `
-          <span class="chip chip--${cls}" title="${escapeHtml(r.url)}${r.error ? " — " + escapeHtml(r.error) : ""}">
+          <button class="chip chip--${statusCls}${isActive ? " chip--active" : ""}"
+                  data-repo-filter="${r.id}"
+                  title="${escapeHtml(r.url)}${escapeHtml(titleExtra)}">
             <span class="chip__dot"></span>
             <span class="chip__label">${escapeHtml(r.name)}</span>
             ${count}
-          </span>`;
+          </button>`;
       })
       .join("");
 
+    // Bind click handlers for filter toggling
+    el.repobar.querySelectorAll("[data-repo-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.repoFilter;
+        const repo = state.repos.find((r) => r.id === id);
+        // Only allow filtering on repos that actually have apps
+        if (!repo || repo.status !== "ok") return;
+        state.activeRepo = state.activeRepo === id ? null : id;
+        renderRepobar();
+        renderGrid();
+      });
+    });
+
     const ok = state.repos.filter((r) => r.status === "ok").length;
     const errored = state.repos.filter((r) => r.status === "error").length;
+    const cors = state.repos.filter((r) => r.status === "cors").length;
     const loading = state.repos.filter((r) => r.status === "loading").length;
     const parts = [];
     if (ok)
       parts.push(`<strong>${ok}</strong> repo${ok === 1 ? "" : "s"} loaded`);
     if (loading) parts.push(`${loading} loading…`);
-    if (errored) parts.push(`${errored} failed`);
+    if (errored) parts.push(`${errored} unreachable`);
+    if (cors) parts.push(`${cors} CORS blocked`);
+    if (state.activeRepo) {
+      const active = state.repos.find((r) => r.id === state.activeRepo);
+      if (active)
+        parts.push(
+          `<strong>filtering: ${escapeHtml(active.name)}</strong> <button class="status-line__clear" id="clearRepoFilter">show all</button>`,
+        );
+    }
     el.statusLine.innerHTML = parts.join(" · ");
+
+    // Bind the "show all" inline button if present
+    const clearBtn = document.getElementById("clearRepoFilter");
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        state.activeRepo = null;
+        renderRepobar();
+        renderGrid();
+      });
+    }
 
     renderRepoListInModal();
   }
@@ -575,16 +643,24 @@
       el.repolist.innerHTML = `<div class="modal__sub" style="margin:0;">No repos added yet.</div>`;
       return;
     }
-    el.repolist.innerHTML = state.repos
+    el.repolist.innerHTML = sortedRepos()
       .map((r) => {
         const cls =
-          r.status === "ok" ? "ok" : r.status === "error" ? "error" : "loading";
+          r.status === "ok"
+            ? "ok"
+            : r.status === "cors"
+              ? "cors"
+              : r.status === "error"
+                ? "error"
+                : "loading";
         const sub =
           r.status === "ok"
             ? `${r.count} listing${r.count === 1 ? "" : "s"}`
-            : r.status === "error"
+            : r.status === "cors"
               ? r.error
-              : "loading…";
+              : r.status === "error"
+                ? r.error
+                : "loading…";
         return `
           <div class="repolist__row">
             <span class="chip__dot chip--${cls} chip__dot"></span>
@@ -613,9 +689,20 @@
   // Rendering: grid
   // ------------------------------------------------------------------
   function filteredApps() {
+    let apps = state.combinedApps;
+
+    // Repo filter — only show apps that come from the selected repo
+    if (state.activeRepo) {
+      const repo = state.repos.find((r) => r.id === state.activeRepo);
+      if (repo) {
+        apps = apps.filter((a) => a.repoNames.includes(repo.name));
+      }
+    }
+
+    // Search filter
     const q = state.search.trim().toLowerCase();
-    if (!q) return state.combinedApps;
-    return state.combinedApps.filter((a) => {
+    if (!q) return apps;
+    return apps.filter((a) => {
       return (
         a.name.toLowerCase().includes(q) ||
         (a.developerName || "").toLowerCase().includes(q) ||
@@ -965,6 +1052,7 @@
   }
 
   function removeRepo(id) {
+    if (state.activeRepo === id) state.activeRepo = null;
     state.repos = state.repos.filter((r) => r.id !== id);
     persistRepos();
     rebuildCombinedApps();
@@ -976,6 +1064,7 @@
     if (!state.repos.length) return;
     if (!confirm("Remove all repos?")) return;
     state.repos = [];
+    state.activeRepo = null;
     persistRepos();
     rebuildCombinedApps();
     renderRepobar();
@@ -1035,6 +1124,148 @@
   }
 
   // ------------------------------------------------------------------
+  // PWA install prompt
+  // ------------------------------------------------------------------
+
+  // Key used to remember that the user dismissed the banner so we don't
+  // keep nagging them on every visit.
+  const PWA_DISMISSED_KEY = "pwa-install-dismissed";
+
+  // Holds the deferred BeforeInstallPromptEvent (Chrome / Android).
+  let deferredInstallPrompt = null;
+
+  function isRunningAsPwa() {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function isIos() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+
+  function isSafariBrowser() {
+    // Safari on iOS — not Chrome or Firefox on iOS (which can't install PWAs)
+    return (
+      /safari/i.test(navigator.userAgent) &&
+      !/crios|fxios/i.test(navigator.userAgent)
+    );
+  }
+
+  function showInstallBanner() {
+    const banner = document.getElementById("installBanner");
+    if (!banner) return;
+    banner.hidden = false;
+    banner.classList.add("install-banner--visible");
+  }
+
+  function hideInstallBanner() {
+    const banner = document.getElementById("installBanner");
+    if (!banner) return;
+    banner.classList.remove("install-banner--visible");
+    // Wait for the slide-out transition before hiding from DOM flow
+    banner.addEventListener(
+      "transitionend",
+      () => {
+        banner.hidden = true;
+      },
+      { once: true },
+    );
+  }
+
+  function showIosTip() {
+    const tip = document.getElementById("iosInstallTip");
+    if (!tip) return;
+    tip.hidden = false;
+    // Slight delay so the display:block kicks in before the opacity transition
+    requestAnimationFrame(() => tip.classList.add("ios-install-tip--visible"));
+  }
+
+  function hideIosTip() {
+    const tip = document.getElementById("iosInstallTip");
+    if (!tip) return;
+    tip.classList.remove("ios-install-tip--visible");
+    tip.addEventListener(
+      "transitionend",
+      () => {
+        tip.hidden = true;
+      },
+      { once: true },
+    );
+  }
+
+  function initPwaInstall() {
+    // Don't show anything if already running as a PWA
+    if (isRunningAsPwa()) return;
+
+    // Don't show if the user has already dismissed
+    if (localStorage.getItem(PWA_DISMISSED_KEY)) return;
+
+    const installBtn = document.getElementById("installBannerBtn");
+    const dismissBtn = document.getElementById("installBannerDismiss");
+    const iosTipClose = document.getElementById("iosInstallTipClose");
+    const bannerSub = document.getElementById("installBannerSub");
+
+    // --- Android / Chrome: native prompt ---
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      if (bannerSub)
+        bannerSub.textContent =
+          "Install this app for quick access from your home screen.";
+      showInstallBanner();
+    });
+
+    if (installBtn) {
+      installBtn.addEventListener("click", async () => {
+        if (deferredInstallPrompt) {
+          // Native Android/Chrome install
+          deferredInstallPrompt.prompt();
+          const { outcome } = await deferredInstallPrompt.userChoice;
+          deferredInstallPrompt = null;
+          hideInstallBanner();
+          if (outcome === "accepted")
+            localStorage.setItem(PWA_DISMISSED_KEY, "1");
+        } else if (isIos()) {
+          // iOS: can't trigger natively — show the manual instructions tooltip
+          hideInstallBanner();
+          showIosTip();
+        }
+      });
+    }
+
+    if (dismissBtn) {
+      dismissBtn.addEventListener("click", () => {
+        localStorage.setItem(PWA_DISMISSED_KEY, "1");
+        hideInstallBanner();
+      });
+    }
+
+    if (iosTipClose) {
+      iosTipClose.addEventListener("click", () => {
+        localStorage.setItem(PWA_DISMISSED_KEY, "1");
+        hideIosTip();
+      });
+    }
+
+    // --- iOS Safari: show banner manually (no beforeinstallprompt support) ---
+    if (isIos() && isSafariBrowser()) {
+      if (bannerSub)
+        bannerSub.textContent =
+          "Add this app to your Home Screen for quick access.";
+      // Short delay so the page has painted before we slide the banner in
+      setTimeout(showInstallBanner, 1200);
+    }
+
+    // Hide the banner once the app is actually installed
+    window.addEventListener("appinstalled", () => {
+      localStorage.setItem(PWA_DISMISSED_KEY, "1");
+      hideInstallBanner();
+    });
+  }
+
+  // ------------------------------------------------------------------
   // Init
   // ------------------------------------------------------------------
   function init() {
@@ -1044,6 +1275,7 @@
     renderRepobar();
     renderAll();
     if (state.repos.length) loadAllRepos();
+    initPwaInstall();
   }
 
   document.addEventListener("DOMContentLoaded", init);
