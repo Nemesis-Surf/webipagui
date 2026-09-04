@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Nemesis - Sideloading Central, The ultimate Sideloading One Stop Shops</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Nemesis - Sideloading Central, The ultimate Sideloading One Stop Shop"
+    />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#0a0614" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sideloading.nemesis.surf/" />
+    <meta property="og:title" content="Nemesis - Sideloading Central, The ultimate Sideloading One Stop Shops" />
+    <meta
+      property="og:description"
+      content="Browse and install iOS sideloading repos from your browser. Client-side, no backend, works with AltStore, SideStore, Feather, Scarlet, and eSign."
+    />
+    <meta
+      property="og:image"
+      content="https://nemesis.surf/android-chrome-512x512.png"
+    />
+    <meta property="og:image:width" content="500" />
+    <meta property="og:image:height" content="500" />
+    <meta property="og:site_name" content="nemesis.surf" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://sideloading.nemesis.surf/" />
+    <meta property="twitter:title" content="Nemesis - Sideloading Central, The ultimate Sideloading One Stop Shops" />
+    <meta
+      property="twitter:description"
+      content="Browse and install iOS sideloading repos from your browser. Client-side, no backend."
+    />
+    <meta
+      property="twitter:image"
+      content="https://nemesis.surf/android-chrome-512x512.png"
+    />
+
+    <!-- Additional Meta Tags -->
+    <meta name="author" content="nemesis.surf" />
+    <meta name="robots" content="index, follow" />
+
+    <link rel="stylesheet" type="text/css" href="./style.css" />
+  </head>
+
+  <body>
+    <!-- Top bar -->
+    <header class="topbar">
+      <a href="/" class="topbar__brand">
+        <span class="topbar__mark">⌁</span>
+        <span class="topbar__wordmark">Sideloading Central<small>sideloading.nemesis.surf</small></span>
+      </a>
+      <div class="topbar__spacer"></div>
+      <div class="search">
+        <svg
+          class="search__icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Search apps, bundle IDs, developers…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+      <button class="btn" id="openToolsModalBtn">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+          ></path>
+        </svg>
+        <span>Tools</span>
+      </button>
+      <button class="btn btn--primary" id="openRepoModalBtn">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Repos</span>
+      </button>
+    </header>
+
+    <main class="page">
+      <section class="hero">
+        <h1>Browse your sideloading repos</h1>
+        <p>
+          Load one or more AltStore-format sources, search across all of them at
+          once, and send any IPA straight to the app on your device — all in
+          your browser, nothing leaves your device.
+        </p>
+      </section>
+
+      <div class="repobar" id="repobar"></div>
+      <div class="status-line" id="statusLine"></div>
+
+      <div id="gridContainer"></div>
+    </main>
+
+    <div class="page" style="padding-top: 0">
+      <footer class="footer">
+        <span
+          >Sideloading Central · runs entirely in your browser · no data leaves this
+          page</span
+        >
+        <span
+          >IPAs are served by the repo owner, not nemesis.surf — verify sources
+          you trust</span
+        >
+      </footer>
+    </div>
+
+    <!-- Repo manager modal -->
+    <div class="modal-backdrop" id="repoModalBackdrop" hidden>
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="repoModalTitle"
+      >
+        <div class="modal__header">
+          <h2 id="repoModalTitle">Manage repos</h2>
+          <button
+            class="btn btn--ghost btn--sm"
+            id="closeRepoModalBtn"
+            aria-label="Close"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <p class="modal__sub">
+          Paste one or more AltStore-format source URLs (the same JSON links
+          you'd add inside AltStore, SideStore, Feather, or eSign). Everything
+          is fetched directly by your browser and kept only on this device.
+        </p>
+
+        <form id="addRepoForm" class="field-row">
+          <input
+            type="url"
+            id="repoUrlInput"
+            placeholder="https://example.com/repo.json"
+            required
+          />
+          <button class="btn btn--primary" type="submit">Add</button>
+        </form>
+
+        <div class="repolist" id="repolist"></div>
+
+        <details class="advanced">
+          <summary>Import / export repo list</summary>
+          <p>
+            Paste one URL per line to import several at once, or copy your
+            current list out as plain text to back up or share.
+          </p>
+          <textarea
+            id="bulkRepoText"
+            rows="4"
+            placeholder="https://example.com/repo-one.json&#10;https://example.com/repo-two.json"
+            style="
+              width: 100%;
+              resize: vertical;
+              border-radius: 12px;
+              border: 1px solid var(--border);
+              background: var(--bg-elevated-2);
+              color: var(--text-primary);
+              padding: 10px 12px;
+              font: 12.5px var(--font-mono);
+              box-sizing: border-box;
+            "
+          ></textarea>
+          <div class="field-row" style="margin-top: 8px">
+            <button class="btn btn--sm" id="importRepoListBtn" type="button">
+              Import list
+            </button>
+            <button class="btn btn--sm" id="exportRepoListBtn" type="button">
+              Copy current list
+            </button>
+          </div>
+        </details>
+
+        <details class="advanced">
+          <summary>Recommended sources</summary>
+          <p>
+            A curated set of official/community sources, based on the
+            <a
+              href="https://github.com/victordedomenico/awesome-altstore"
+              target="_blank"
+              rel="noopener"
+              >awesome-altstore</a
+            >
+            list. Tap Add to load one straight in.
+          </p>
+          <div
+            class="repolist"
+            id="recommendedRepoList"
+            style="max-height: 220px"
+          ></div>
+        </details>
+
+        <details class="advanced">
+          <summary>Advanced: CORS proxy (optional)</summary>
+          <p>
+            Some repos don't send the headers browsers require for cross-site
+            JSON fetches, so loading them here may fail even though the URL is
+            correct. If that happens, you can route
+            <em>metadata fetches only</em> through a CORS proxy you trust.
+            Download links and install buttons always point straight at the
+            original file — the proxy is never used for the IPA itself.
+          </p>
+          <div class="field-row">
+            <input
+              type="text"
+              id="corsProxyInput"
+              placeholder="e.g. https://corsproxy.io/?url="
+            />
+            <button class="btn btn--sm" id="saveProxyBtn" type="button">
+              Save
+            </button>
+          </div>
+        </details>
+
+        <div class="modal__actions">
+          <button class="btn btn--danger" id="clearReposBtn" type="button">
+            Remove all
+          </button>
+          <button class="btn btn--primary" id="doneRepoModalBtn" type="button">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tools / providers modal -->
+    <div class="modal-backdrop" id="toolsModalBackdrop" hidden>
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="toolsModalTitle"
+      >
+        <div class="modal__header">
+          <h2 id="toolsModalTitle">Sideloading tools</h2>
+          <button
+            class="btn btn--ghost btn--sm"
+            id="closeToolsModalBtn"
+            aria-label="Close"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <p class="modal__sub">
+          Third-party apps and signing services this page can send IPAs to. None
+          of these are made or hosted by nemesis.surf — links open in a new tab,
+          and anything flagged "verify before use" changes hands or location
+          often, so double-check you're on the real thing before entering an
+          Apple ID or installing a certificate.
+        </p>
+        <div class="modal__section-title">Installer apps</div>
+        <div class="repolist" id="toolsInstallerList"></div>
+        <div class="modal__section-title">On-device / web signers</div>
+        <div class="repolist" id="toolsSignerList"></div>
+        <div class="modal__actions">
+          <button
+            class="btn btn--primary"
+            id="closeToolsModalBtn2"
+            type="button"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">
+      <span class="toast__dot"></span>
+      <span id="toastText"></span>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
