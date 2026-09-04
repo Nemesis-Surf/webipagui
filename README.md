@@ -2,6 +2,10 @@
   <img src="https://files.nemesis.surf/raw/YYVqdT.png" alt="Nemesis" width="100%" />
 </p>
 
+<h1 align="center">KNOW ISSUE</h1>
+mobile styling for app listing is bugged  
+this is being debugged  
+
 <h1 align="center">Sideloading Central</h1>
 
 <p align="center">
