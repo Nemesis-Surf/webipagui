@@ -547,15 +547,70 @@
   // Rendering: repo bar
   // ------------------------------------------------------------------
 
-  // Sort order: ok → error (unreachable) → cors → loading
+  // Sort order: ok (reachable) → error (unreachable) → cors (CORS blocked) → loading
   const REPO_STATUS_ORDER = { ok: 0, error: 1, cors: 2, loading: 3 };
 
   function sortedRepos() {
     return [...state.repos].sort(
       (a, b) =>
-        (REPO_STATUS_ORDER[a.status] ?? 9) - (REPO_STATUS_ORDER[b.status] ?? 9),
+        (REPO_STATUS_ORDER[a.status] ?? 9) -
+          (REPO_STATUS_ORDER[b.status] ?? 9) || a.name.localeCompare(b.name),
     );
   }
+
+  function repoChipHtml(r) {
+    const isActive = state.activeRepo === r.id;
+    const statusCls =
+      r.status === "ok"
+        ? "ok"
+        : r.status === "cors"
+          ? "cors"
+          : r.status === "error"
+            ? "error"
+            : "loading";
+    const count =
+      r.status === "ok" ? `<span class="chip__count">${r.count}</span>` : "";
+    const titleExtra = r.error ? ` — ${r.error}` : "";
+    return `
+      <button class="chip chip--${statusCls}${isActive ? " chip--active" : ""}"
+              data-repo-filter="${r.id}"
+              title="${escapeHtml(r.url)}${escapeHtml(titleExtra)}">
+        <span class="chip__dot"></span>
+        <span class="chip__label">${escapeHtml(r.name)}</span>
+        ${count}
+      </button>`;
+  }
+
+  const REPO_GROUPS = [
+    {
+      key: "ok",
+      label: "Available",
+      dotCls: "chip--ok",
+      pulse: false,
+      defaultOpen: true,
+    },
+    {
+      key: "error",
+      label: "Unreachable",
+      dotCls: "chip--error",
+      pulse: false,
+      defaultOpen: false,
+    },
+    {
+      key: "cors",
+      label: "CORS Blocked",
+      dotCls: "chip--cors",
+      pulse: false,
+      defaultOpen: false,
+    },
+    {
+      key: "loading",
+      label: "Loading",
+      dotCls: "chip--loading",
+      pulse: true,
+      defaultOpen: true,
+    },
+  ];
 
   function renderRepobar() {
     if (!state.repos.length) {
@@ -565,30 +620,32 @@
       return;
     }
 
-    el.repobar.innerHTML = sortedRepos()
-      .map((r) => {
-        const isActive = state.activeRepo === r.id;
-        const statusCls =
-          r.status === "ok"
-            ? "ok"
-            : r.status === "cors"
-              ? "cors"
-              : r.status === "error"
-                ? "error"
-                : "loading";
-        const count =
-          r.status === "ok"
-            ? `<span class="chip__count">${r.count}</span>`
-            : "";
-        const titleExtra = r.error ? ` — ${r.error}` : "";
+    // Bucket repos by status and sort each bucket alphabetically
+    const byStatus = {};
+    REPO_GROUPS.forEach((g) => (byStatus[g.key] = []));
+    state.repos.forEach((r) => {
+      if (byStatus[r.status]) byStatus[r.status].push(r);
+    });
+    Object.values(byStatus).forEach((arr) =>
+      arr.sort((a, b) => a.name.localeCompare(b.name)),
+    );
+
+    // Render only groups that have at least one repo
+    el.repobar.innerHTML = REPO_GROUPS.filter((g) => byStatus[g.key].length > 0)
+      .map((g) => {
+        const repos = byStatus[g.key];
+        const openAttr = g.defaultOpen ? " open" : "";
+        const pulseClass = g.pulse ? " chip__dot--pulse" : "";
+        const chips = repos.map(repoChipHtml).join("");
         return `
-          <button class="chip chip--${statusCls}${isActive ? " chip--active" : ""}"
-                  data-repo-filter="${r.id}"
-                  title="${escapeHtml(r.url)}${escapeHtml(titleExtra)}">
-            <span class="chip__dot"></span>
-            <span class="chip__label">${escapeHtml(r.name)}</span>
-            ${count}
-          </button>`;
+          <details class="repogroup"${openAttr}>
+            <summary class="repogroup__summary">
+              <span class="chip__dot ${g.dotCls}${pulseClass}"></span>
+              <span class="repogroup__label">${g.label}</span>
+              <span class="repogroup__count">${repos.length}</span>
+            </summary>
+            <div class="repogroup__chips">${chips}</div>
+          </details>`;
       })
       .join("");
 
@@ -597,7 +654,6 @@
       btn.addEventListener("click", () => {
         const id = btn.dataset.repoFilter;
         const repo = state.repos.find((r) => r.id === id);
-        // Only allow filtering on repos that actually have apps
         if (!repo || repo.status !== "ok") return;
         state.activeRepo = state.activeRepo === id ? null : id;
         renderRepobar();
@@ -605,10 +661,10 @@
       });
     });
 
-    const ok = state.repos.filter((r) => r.status === "ok").length;
-    const errored = state.repos.filter((r) => r.status === "error").length;
-    const cors = state.repos.filter((r) => r.status === "cors").length;
-    const loading = state.repos.filter((r) => r.status === "loading").length;
+    const ok = byStatus.ok.length;
+    const errored = byStatus.error.length;
+    const cors = byStatus.cors.length;
+    const loading = byStatus.loading.length;
     const parts = [];
     if (ok)
       parts.push(`<strong>${ok}</strong> repo${ok === 1 ? "" : "s"} loaded`);
@@ -624,7 +680,6 @@
     }
     el.statusLine.innerHTML = parts.join(" · ");
 
-    // Bind the "show all" inline button if present
     const clearBtn = document.getElementById("clearRepoFilter");
     if (clearBtn) {
       clearBtn.addEventListener("click", () => {
